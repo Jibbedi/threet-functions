@@ -1,8 +1,8 @@
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 
-var EloRating = require('elo-rating');
-var robin = require('roundrobin');
+const EloRating = require('elo-rating');
+const robin = require('roundrobin');
 
 function calculateStreak(currentStreak = 0, win: boolean) {
     const impact = win ? +1 : -1;
@@ -39,20 +39,20 @@ function getRanking(games) {
 
     const ranking = games.reduce((table, game) => {
 
-        const {firstPlayerName, secondPlayerName} = game;
+        const {firstPlayerName, secondPlayerName, firstPlayerId, secondPlayerId} = game;
 
 
         if (!table[firstPlayerName]) {
-            table[firstPlayerName] = initializePlayer(firstPlayerName);
+            table[firstPlayerName] = initializePlayer(firstPlayerName, firstPlayerId);
         }
 
         if (!table[secondPlayerName]) {
-            table[secondPlayerName] = initializePlayer(secondPlayerName);
+            table[secondPlayerName] = initializePlayer(secondPlayerName, secondPlayerId);
         }
 
         if (game.done) {
             updatePlayerStats(table[firstPlayerName], getFirstPlayerWon(game), game.firstPlayerScore, game.secondPlayerScore);
-            updatePlayerStats(table[secondPlayerName], getFirstPlayerWon(game), game.secondPlayerScore, game.firstPlayerScore);
+            updatePlayerStats(table[secondPlayerName], !getFirstPlayerWon(game), game.secondPlayerScore, game.firstPlayerScore);
         }
 
         return table;
@@ -61,12 +61,12 @@ function getRanking(games) {
 
     return Object.keys(ranking)
         .map(playerKey => ranking[playerKey])
-        .sort((a: any, b: any) => b.points - a.points);
+        .sort((a: any, b: any) => b.points !== a.points ? b.points - a.points : (b.scoreFor - b.scoreAgainst) - (a.scoreFor - a.scoreAgainst));
 }
 
 
-function initializePlayer(playerName: string) {
-    return {name: playerName, wins: 0, loses: 0, scoreFor: 0, scoreAgainst: 0, points: 0};
+function initializePlayer(playerName: string, id) {
+    return {name: playerName, id, wins: 0, loses: 0, scoreFor: 0, scoreAgainst: 0, points: 0};
 }
 
 function updatePlayerStats(stats, won, scoreFor, scoreAgainst) {
@@ -82,28 +82,57 @@ function getFirstPlayerWon(game) {
 }
 
 async function handleLeagueMatchUpdate(game, stage) {
-    console.log(game.tournamentId);
-    const tournament = await admin
+    const tournamentSnapshot = await admin
         .firestore()
         .collection(stage + 'tournaments')
         .doc(game.tournamentId)
-        .get()
-        .then(snapshot => snapshot.data());
+        .get();
+
+
+    const tournament = tournamentSnapshot.data();
 
     const matches = await getGamesForIds(tournament.games, stage);
 
     const tournamentDone = !matches.some(match => !match.done);
 
-    console.log(getRanking(matches));
-
     if (!tournamentDone) {
+        console.log('tournament not done');
         return true;
     }
 
+    console.log('tounament done');
 
-    return true;
 
-    // const players = await getPlayersForIds(tournament.participantIds, stage);
+    const ranking = getRanking(matches);
+
+    const playerSnapshots = await getPlayerSnapshotsForIds(tournament.participantsIds, stage);
+
+    const totalPot = playerSnapshots.length * tournament.stakePerPlayer;
+
+    const stakePerPlace = tournament.splitPercentages.map(percentage => Math.round(percentage / 100 * totalPot));
+
+
+    const playerUpdates = playerSnapshots.map(snapshot => {
+        const player = snapshot.data();
+        const place = ranking.findIndex(r => r.id === player.id);
+        const wonStake = stakePerPlace[place] || 0;
+
+        console.log(player.name);
+        console.log(wonStake);
+
+        return snapshot.ref.update({
+            eloRank: player.eloRank + (wonStake - tournament.stakePerPlayer)
+        });
+    });
+
+
+    const tournamentUpdate = tournamentSnapshot.ref.update({
+        done: true,
+        winnerId: ranking[0].id,
+        winnerName: ranking[0].name
+    });
+
+    return await Promise.all([...playerUpdates, tournamentUpdate]);
 
 }
 
@@ -111,8 +140,6 @@ function calculateTournament(event, stage = '') {
 
 
     const game = event.after.data();
-    console.log(game);
-    return Promise.resolve(true);
 
     const {tournamentId} = game;
 
@@ -387,6 +414,10 @@ function getPlayersForIds(ids: string[], stage) {
     return Promise.all(ids.map(id => getPlayerById(id, stage)));
 }
 
+function getPlayerSnapshotsForIds(ids: string[], stage) {
+    return Promise.all(ids.map(id => getPlayerSnapshotById(id, stage)));
+}
+
 function getGamesForIds(ids: string[], stage) {
     return Promise.all(ids.map(id => getGameById(id, stage)));
 }
@@ -399,7 +430,7 @@ function createGame(game, stage): Promise<string> {
         .then(gameWrite => gameWrite.id);
 }
 
-async function createLeagueTournament(tournament, stage) {
+async function createLeagueTournament(tournament, stage = '') {
     const players = shuffle(await getPlayersForIds(tournament.participantsIds, stage));
 
 
@@ -414,6 +445,8 @@ async function createLeagueTournament(tournament, stage) {
                     secondPlayerName: secondPlayer.name,
                     secondPlayerId: secondPlayer.id,
                     done: false,
+                    shouldEffectElo: tournament.shouldEffectElo,
+                    shouldEffectRank: tournament.shouldEffectRank,
                     mode: tournament.mode,
                     tournamentId: tournament.id,
                 };
@@ -459,7 +492,14 @@ exports.calculateTournamentDev = functions.firestore
 exports.createKnockoutTournamentProd = functions.firestore
     .document('tournaments/{tournamentId}')
     .onCreate(event => {
-        return createKnockoutTournament(event);
+        const tournament = event.data();
+        tournament.id = event.id;
+
+        if (tournament.mode === 'knockout') {
+            return createKnockoutTournament(event);
+        } else {
+            return createLeagueTournament(tournament);
+        }
     });
 
 exports.createKnockoutTournamentDev = functions.firestore
@@ -482,7 +522,7 @@ exports.preMatchInfo = functions.https.onCall((data, context) => {
 
 exports.moveTo = functions.https.onCall((data, context) => {
 
-    const collections = ['games', 'players'];
+    const collections = ['games', 'players', 'tournaments'];
 
     return Promise.all(
         collections.map(collectionName => admin
@@ -522,6 +562,14 @@ function getPlayerById(id: string, stage: string) {
         .doc(id)
         .get()
         .then(snapshot => snapshot.data());
+}
+
+function getPlayerSnapshotById(id: string, stage: string) {
+    return admin
+        .firestore()
+        .collection(stage + 'players')
+        .doc(id)
+        .get()
 }
 
 function getGameById(id: string, stage: string) {
