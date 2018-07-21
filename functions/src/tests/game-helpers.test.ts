@@ -6,7 +6,7 @@ import {
     getWinnerId,
     getWinnerName,
     getWinnerScore
-} from '../helper/game.helpers';
+} from '../helper/game';
 
 
 const firstPlayerWonGame: Game = {
@@ -16,7 +16,7 @@ const firstPlayerWonGame: Game = {
     secondPlayerName: 'Second Player',
     secondPlayerScore: 0,
     secondPlayerId: '2',
-    done: true
+    done: true,
 };
 
 const secondPlayerWonGame: Game = {

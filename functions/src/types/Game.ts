@@ -5,5 +5,9 @@ export interface Game {
     secondPlayerId: string;
     firstPlayerScore: number;
     secondPlayerScore: number;
-    done : boolean;
+    done: boolean;
+    shouldEffectElo?: boolean;
+    shouldEffectRank?: boolean;
+    mode?: 'knockout' | 'league';
+    tournamentId?: string;
 }

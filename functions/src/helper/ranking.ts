@@ -1,5 +1,5 @@
 import {Game} from '../types/Game';
-import {getFirstPlayerWon} from './game.helpers';
+import {getFirstPlayerWon} from './game';
 import {RankingItem} from '../types/RankingItem';
 
 export function getRanking(games: Game[]): RankingItem[] {
