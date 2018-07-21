@@ -26,7 +26,7 @@ database.updateTournamentWithGameIds = jest.fn().mockImplementation((tournamentI
 
 describe('create tournament', () => {
 
-    test('it should call create games 6 times for four players games and update database', async () => {
+    test('it should call create games 6 times for four players and update database', async () => {
 
         const tournament = {
             id: 'test',
