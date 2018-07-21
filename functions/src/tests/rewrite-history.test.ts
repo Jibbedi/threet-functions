@@ -1,15 +1,15 @@
 import {rewriteHistory} from '../helper/rewrite-history';
 
 describe('history calculation', () => {
-    test('it should add true to history if game was one', () => {
+    test('it should add true to history if game was won', () => {
         expect(rewriteHistory([], true)).toEqual([true]);
     });
 
-    test('it should add false to history if game was one', () => {
+    test('it should add false to history if game was won', () => {
         expect(rewriteHistory([], false)).toEqual([false]);
     });
 
-    test('it should push data to the array', () => {
+    test('it should append history data to the array', () => {
         expect(rewriteHistory([true], false)).toEqual([true, false]);
     });
 
