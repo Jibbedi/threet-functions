@@ -45,6 +45,21 @@ export function getTournamentSnapshotForId(id: string, stage: string) {
         .get();
 }
 
+
+export function updateGameSnapshot(snapshot, updateData: Partial<Game>) {
+    return snapshot
+        .ref
+        .update(updateData)
+}
+
+export function getGameSnapshotById(id: string, stage: string) {
+    return admin
+        .firestore()
+        .collection(stage + GAME_COLLECTION)
+        .doc(id)
+        .get()
+}
+
 export function getGameById(id: string, stage: string): Promise<Game> {
     return admin
         .firestore()

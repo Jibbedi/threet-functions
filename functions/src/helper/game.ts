@@ -46,12 +46,12 @@ export function getLoserId(game: Game): string | null {
     return getFirstPlayerWon(game) ? game.secondPlayerId : game.firstPlayerId;
 }
 
-export function createGameDataForPlayers(firstPlayer: Player, secondPlayer: Player, tournament: Tournament): Game {
+export function createGameDataForPlayers(firstPlayer: Player | null, secondPlayer: Player | null, tournament: Tournament): Game {
     return {
-        firstPlayerName: firstPlayer.name,
-        firstPlayerId: firstPlayer.id,
-        secondPlayerName: secondPlayer.name,
-        secondPlayerId: secondPlayer.id,
+        firstPlayerName: firstPlayer ? firstPlayer.name : null,
+        firstPlayerId: firstPlayer ? firstPlayer.id : null,
+        secondPlayerName: secondPlayer ? secondPlayer.name : null,
+        secondPlayerId: secondPlayer ? secondPlayer.id : null,
         firstPlayerScore: 0,
         secondPlayerScore: 0,
         done: false,
