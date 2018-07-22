@@ -13,4 +13,5 @@ export interface Player {
     totalScoreDiff: number;
     history: boolean[];
     tournamentWins: number;
+    leagueWins: number;
 }
