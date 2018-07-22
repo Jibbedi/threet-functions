@@ -3,6 +3,10 @@ import * as database from '../helper/database';
 import {Tournament} from '../types/Tournament';
 import {Game} from '../types/Game';
 
+
+const MOCK_TOURNAMENT_ID = 1;
+const MOCK_TOURNAMENT_REF = {id: MOCK_TOURNAMENT_ID};
+
 database.getPlayersForIds = jest.fn().mockImplementation((ids) =>
     Promise.all(ids.map(id => {
         return Promise.resolve({
@@ -16,27 +20,30 @@ database.writeGameToDatabase = jest.fn().mockImplementation((game: Game) => Prom
     game.firstPlayerName + ' vs ' + game.secondPlayerName
 ));
 
-database.updateTournamentWithGameIds = jest.fn().mockImplementation((tournamentId: string, gameIds: string[]) => Promise.resolve(
-    {
-        gameIds,
-        id: tournamentId
-    }
+database.writeTournamentToDatabase = jest.fn().mockImplementation((tournament: Tournament) => Promise.resolve(
+    MOCK_TOURNAMENT_ID
 ));
 
+database.getNewTournamentDocument = jest.fn().mockImplementation((tournament: Tournament) => {
+        return MOCK_TOURNAMENT_REF;
+    }
+);
 
 describe('create tournament', () => {
 
-    test('it should call create games 6 times for four players and update database', async () => {
+    test('it should call create games 6 times for four players and create tournament', async () => {
 
         const tournament = {
-            id: 'test',
             participantsIds: [1, 2, 3, 4]
         } as any as Tournament;
 
-        await createLeagueTournament(tournament, 'dev_');
+        const tournamentId = await createLeagueTournament(tournament, 'dev_');
 
         expect(database.writeGameToDatabase).toHaveBeenCalledTimes(6);
-        expect(database.updateTournamentWithGameIds).toHaveBeenCalled();
+        expect(database.getNewTournamentDocument).toHaveBeenCalledWith('dev_');
+        expect(database.writeTournamentToDatabase).toHaveBeenCalledWith(MOCK_TOURNAMENT_REF, tournament);
+        expect(tournament.id).toBe(tournamentId);
+        expect(tournament.games).toBeTruthy();
 
     });
 

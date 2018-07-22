@@ -1,4 +1,6 @@
 import {Game} from '../types/Game';
+import {Player} from '../types/Player';
+import {Tournament} from '../types/Tournament';
 
 export function getFirstPlayerWon(game: Game) {
     return game.firstPlayerScore > game.secondPlayerScore;
@@ -42,4 +44,20 @@ export function getLoserId(game: Game): string | null {
     }
 
     return getFirstPlayerWon(game) ? game.secondPlayerId : game.firstPlayerId;
+}
+
+export function createGameDataForPlayers(firstPlayer: Player, secondPlayer: Player, tournament: Tournament): Game {
+    return {
+        firstPlayerName: firstPlayer.name,
+        firstPlayerId: firstPlayer.id,
+        secondPlayerName: secondPlayer.name,
+        secondPlayerId: secondPlayer.id,
+        firstPlayerScore: 0,
+        secondPlayerScore: 0,
+        done: false,
+        shouldEffectElo: tournament.shouldEffectElo,
+        shouldEffectRank: tournament.shouldEffectRank,
+        mode: tournament.mode,
+        tournamentId: tournament.id,
+    };
 }

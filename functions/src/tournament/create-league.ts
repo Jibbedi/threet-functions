@@ -1,13 +1,24 @@
-import {getPlayersForIds, updateTournamentWithGameIds, writeGameToDatabase} from '../helper/database';
+import {
+    getNewTournamentDocument,
+    getPlayersForIds,
+    writeGameToDatabase,
+    writeTournamentToDatabase
+} from '../helper/database';
 import {Tournament} from '../types/Tournament';
 import {shuffle} from '../helper/array';
 import {Player} from '../types/Player';
 import {Game} from '../types/Game';
+import {createGameDataForPlayers} from '../helper/game';
 
 const robin = require('roundrobin');
 
 export async function createLeagueTournament(tournament: Tournament, stage = '') {
     const players = shuffle(await getPlayersForIds(tournament.participantsIds, stage));
+
+
+    const tournamentRef = getNewTournamentDocument(stage);
+    tournament.id = tournamentRef.id;
+
 
     const schedule: Game[] = robin(players.length)
         .reduce((matches: Game[], participantIndices: number[][]) => {
@@ -15,10 +26,9 @@ export async function createLeagueTournament(tournament: Tournament, stage = '')
         }, []);
 
 
-    const gameIds = await Promise.all(schedule.map(game => writeGameToDatabase(game, stage)));
+    tournament.games = await Promise.all(schedule.map(game => writeGameToDatabase(game, stage)));
 
-
-    return updateTournamentWithGameIds(tournament.id, gameIds, stage);
+    return writeTournamentToDatabase(tournamentRef, tournament);
 }
 
 export function mapPlayerIndicesToGames(participantIndices: number[][], players: Player[], tournament: Tournament): Game[] {
@@ -27,20 +37,4 @@ export function mapPlayerIndicesToGames(participantIndices: number[][], players:
         const secondPlayer = players[pairing[1] - 1];
         return createGameDataForPlayers(firstPlayer, secondPlayer, tournament);
     })
-}
-
-export function createGameDataForPlayers(firstPlayer: Player, secondPlayer: Player, tournament: Tournament): Game {
-    return {
-        firstPlayerName: firstPlayer.name,
-        firstPlayerId: firstPlayer.id,
-        secondPlayerName: secondPlayer.name,
-        secondPlayerId: secondPlayer.id,
-        firstPlayerScore: 0,
-        secondPlayerScore: 0,
-        done: false,
-        shouldEffectElo: tournament.shouldEffectElo,
-        shouldEffectRank: tournament.shouldEffectRank,
-        mode: tournament.mode,
-        tournamentId: tournament.id,
-    };
 }

@@ -1,5 +1,6 @@
 import {Game} from '../types/Game';
 import {
+    createGameDataForPlayers,
     getLoserId,
     getLoserName,
     getLoserScore,
@@ -7,6 +8,8 @@ import {
     getWinnerName,
     getWinnerScore
 } from '../helper/game';
+import {Player} from '../types/Player';
+import {Tournament} from '../types/Tournament';
 
 
 const firstPlayerWonGame: Game = {
