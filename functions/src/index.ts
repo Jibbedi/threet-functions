@@ -517,7 +517,23 @@ exports.createKnockoutTournamentDev = functions.firestore
 
 exports.preMatchInfo = functions.https.onCall((data, context) => {
     const expectedWinFirstPlayer = Math.round(EloRating.expected(data.firstPlayerEloRank, data.secondPlayerEloRank) * 100);
-    return {expectedWinFirstPlayer, expectedWinSecondPlayer: 100 - expectedWinFirstPlayer};
+
+    const firstPlayerWin = EloRating.calculate(data.firstPlayerEloRank, data.secondPlayerEloRank, true);
+    const secondPlayerWin = EloRating.calculate(data.firstPlayerEloRank, data.secondPlayerEloRank, false);
+
+
+    return {
+        firstPlayer: {
+            eloIfWin: firstPlayerWin.playerRating,
+            eloIfLoss: secondPlayerWin.playerRating,
+            winProbability: expectedWinFirstPlayer
+        },
+        secondPlayer: {
+            eloIfWin: secondPlayerWin.opponentRating,
+            eloIfLoss: firstPlayerWin.opponentRating,
+            winProbability: 100 - expectedWinFirstPlayer
+        }
+    }
 });
 
 exports.moveTo = functions.https.onCall((data, context) => {
