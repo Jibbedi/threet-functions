@@ -88,13 +88,19 @@ export function updateTournamentSnapshot(snapshot, updateData: Partial<Tournamen
 export function writeTournamentToDatabase(tournamentRef, tournamentData: Tournament): Promise<string> {
     return tournamentRef
         .set(tournamentData)
-        .then(tournamentWrite => tournamentWrite.id);
+        .then(_ => tournamentRef.id);
 }
 
 export function writeGameToDatabase(game: Game, stage: string): Promise<string> {
-    return admin
+
+    const gameDocument = admin
         .firestore()
         .collection(stage + GAME_COLLECTION)
-        .add(game)
-        .then(gameWrite => gameWrite.id);
+        .doc();
+
+    game.gameId = gameDocument.id;
+
+    return gameDocument.set(game)
+        .then(_ => gameDocument.id);
+
 }

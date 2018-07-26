@@ -1,5 +1,8 @@
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
+import {Tournament} from './types/Tournament';
+import * as createKnockout from './tournament/create-knockout';
+import * as createLeague from './tournament/create-league';
 
 const EloRating = require('elo-rating');
 const robin = require('roundrobin');
@@ -290,11 +293,19 @@ function calculateWins(event, stage = '') {
     const game = event.after.data();
 
     if (!game) {
+        if (stage === 'dev_') {
+            return Promise.resolve(true);
+        }
         return event.before.ref.update({gameId: event.after.id});
     }
 
     if (!game.done) {
         console.log('not done');
+
+        if (stage === 'dev_') {
+            return Promise.resolve(true);
+        }
+
         return !game.gameId ? event.after.ref.update({gameId: event.after.id}) : Promise.resolve(true);
     }
 
@@ -502,18 +513,14 @@ exports.createKnockoutTournamentProd = functions.firestore
         }
     });
 
-exports.createKnockoutTournamentDev = functions.firestore
-    .document('dev_tournaments/{tournamentId}')
-    .onCreate(event => {
-        const tournament = event.data();
-        tournament.id = event.id;
 
-        if (tournament.mode === 'knockout') {
-            return createKnockoutTournament(event, 'dev_');
-        } else {
-            return createLeagueTournament(tournament, 'dev_');
-        }
-    });
+exports.createKnockoutTournamentFunction = functions.https.onCall((data: { tournament: Tournament, stage: string }) => {
+    return createKnockout.createKnockoutTournament(data.tournament, data.stage);
+});
+
+exports.createLeagueTournamentFunction = functions.https.onCall((data: { tournament: Tournament, stage: string }) => {
+    return createLeague.createLeagueTournament(data.tournament, data.stage);
+});
 
 exports.preMatchInfo = functions.https.onCall((data, context) => {
     const expectedWinFirstPlayer = Math.round(EloRating.expected(data.firstPlayerEloRank, data.secondPlayerEloRank) * 100);
