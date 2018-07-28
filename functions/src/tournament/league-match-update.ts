@@ -11,7 +11,7 @@ import {getRanking} from '../helper/ranking';
 import {Player} from '../types/Player';
 import {RankingItem} from '../types/RankingItem';
 
-async function handleLeagueMatchUpdate(game: Game, stage: string) {
+export async function handleLeagueMatchUpdate(game: Game, stage: string) {
 
     const tournamentSnapshot = await getTournamentSnapshotForId(game.tournamentId, stage);
     const tournamentData: Tournament = tournamentSnapshot.data() as Tournament;

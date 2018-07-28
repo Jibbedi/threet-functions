@@ -49,7 +49,7 @@ export function getPlayerUpdateForGame(player: Player, opponent: Player, game: G
     const playerElo = player.eloRank || 1000;
     const opponentElo = opponent.eloRank || 1000;
 
-    const eloRank = game.shouldEffectElo ? EloRating.calculate(playerElo, opponentElo, playerWonGame) : player.eloRank;
+    const eloRank = game.shouldEffectElo !== false ? EloRating.calculate(playerElo, opponentElo, playerWonGame).playerRating : player.eloRank;
 
     // wins and loses
     const totalWins = playerWonGame ? (player.totalWins || 0) + 1 : (player.totalWins || 0);

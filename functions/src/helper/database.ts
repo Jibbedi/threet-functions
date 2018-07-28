@@ -101,6 +101,6 @@ export function writeGameToDatabase(game: Game, stage: string): Promise<string> 
     game.gameId = gameDocument.id;
 
     return gameDocument.set(game)
-        .then(_ => gameDocument.id);
+        .then(_ => game.gameId);
 
 }

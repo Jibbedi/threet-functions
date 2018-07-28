@@ -56,7 +56,11 @@ export async function handleKnockoutMatchUpdate(game: Game, stage = '') {
     const nextRound = getNextRound(tournamentData, game);
     const nextRoundGameData = getNextRoundGameIndex(tournamentData, game);
 
-    const nextRoundGameId = nextRound[nextRoundGameData.gameIndex];
+    const nextRoundGameId = nextRound[nextRoundGameData.gameIndex] || null;
+
+    console.log(nextRound);
+    console.log(nextRoundGameData);
+    console.log(nextRoundGameId);
 
 
     const winningPlayerCurrentMatch = {id: winnerId, name: winnerName} as Player;
@@ -66,35 +70,39 @@ export async function handleKnockoutMatchUpdate(game: Game, stage = '') {
     const nextMatchSecondPlayer = !nextRoundGameData.winningPlayerIsFirstPlayerInNextMatch ? winningPlayerCurrentMatch : null;
 
     // create game if game is not already present for next round
-    if (!nextRoundGameId) {
+    if (nextRoundGameId === null) {
         const newGameId = await writeGameToDatabase(
             createGameDataForPlayers(nextMatchFirstPlayer, nextMatchSecondPlayer, tournamentData), stage
         );
 
-        nextRound[nextRoundGameId] = newGameId;
+        console.log('newGameId', newGameId);
+
+        nextRound[nextRoundGameData.gameIndex] = newGameId;
+
+        console.log('nextRound', nextRound);
+        console.log(tournamentData.stages);
 
         return updateTournamentSnapshot(tournamentSnapshot, {
-            stages : tournamentData.stages
+            stages: tournamentData.stages
         })
     }
-
 
 
     // update game with winning player, if game is already present
 
     const nextGameSnapshot = await getGameSnapshotById(nextRoundGameId, stage);
-    let updateData : Partial<Game>;
+    let updateData: Partial<Game>;
 
     // check if winning player is first player in next round
     if (nextMatchFirstPlayer) {
         updateData = {
-            firstPlayerName : nextMatchFirstPlayer.name,
-            firstPlayerId : nextMatchFirstPlayer.id
+            firstPlayerName: nextMatchFirstPlayer.name,
+            firstPlayerId: nextMatchFirstPlayer.id
         }
     } else {
         updateData = {
-            secondPlayerName : nextMatchSecondPlayer.name,
-            secondPlayerId : nextMatchFirstPlayer.id
+            secondPlayerName: nextMatchSecondPlayer.name,
+            secondPlayerId: nextMatchSecondPlayer.id
         }
     }
 
@@ -105,7 +113,10 @@ export async function handleKnockoutMatchUpdate(game: Game, stage = '') {
 export function getNextRoundGameIndex(tournament: Tournament, game: Game): { gameIndex: number, winningPlayerIsFirstPlayerInNextMatch: boolean } {
     const currentRound = getRoundForGame(tournament, game);
     const currentGameIndex = currentRound.indexOf(game.gameId);
-    return {gameIndex: Math.floor(currentGameIndex / 2), winningPlayerIsFirstPlayerInNextMatch: currentGameIndex % 2 === 0};
+    return {
+        gameIndex: Math.floor(currentGameIndex / 2),
+        winningPlayerIsFirstPlayerInNextMatch: currentGameIndex % 2 === 0
+    };
 }
 
 export function getNextRound(tournament: Tournament, game: Game) {
@@ -141,13 +152,13 @@ export function isTournamentFinished(tournament: Tournament, game: Game) {
     return totalRoundsInTournament === (getRoundIndexForGame(tournament, game) + 1) && game.done;
 }
 
-export function calculateNewEloForPlayer(player: Player, game : Game, tournament: Tournament) {
+export function calculateNewEloForPlayer(player: Player, game: Game, tournament: Tournament) {
     return getWinnerId(game) === player.id ?
-        player.eloRank + (tournament.stakePerPlayer * tournament.participantsIds.length - 1) :
+        player.eloRank + (tournament.stakePerPlayer * (tournament.participantsIds.length - 1)) :
         player.eloRank - tournament.stakePerPlayer;
 }
 
-export function calculateNewTournamentWins(player: Player, game : Game) {
+export function calculateNewTournamentWins(player: Player, game: Game) {
     return getWinnerId(game) === player.id ?
         (player.tournamentWins || 0) + 1 :
         (player.tournamentWins || 0)
