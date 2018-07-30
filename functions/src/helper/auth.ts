@@ -14,6 +14,7 @@ export async function createUser(name: string, email: string, password: string, 
     return userSnapshot.ref.set({
         name,
         email,
-        teamId
+        teamId,
+        id : userRecord.uid
     });
 }
