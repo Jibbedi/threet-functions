@@ -7,6 +7,7 @@ import {Game} from './types/Game';
 import {onGameUpdate} from './games/on-game-update';
 import {preMatchInfo} from './games/pre-match-info';
 import {moveTo} from './helper/move-to';
+import {createUser} from './helper/auth';
 
 
 admin.initializeApp(functions.config().firebase);
@@ -22,6 +23,7 @@ exports.onGameUpdate = functions.firestore
 exports.onGameUpdateDev = functions.firestore
     .document('dev_games/{gamesId}')
     .onUpdate(event => {
+
         const game = event.after.data() as Game;
         return onGameUpdate(game, 'dev_');
     });
@@ -40,4 +42,8 @@ exports.preMatchInfo = functions.https.onCall((data, context) => {
 
 exports.moveTo = functions.https.onCall((data, context) => {
     return moveTo(data);
+});
+
+exports.createUser = functions.https.onCall((data, context) => {
+    return createUser(data.name, data.email, data.password, data.teamId, data.stage);
 });
